@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitoring paneli Hoymiles</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        #voltages { margin-bottom: 20px; }
+        .log-entry { border-bottom: 1px solid #ccc; padding: 5px 0; font-size: 0.9em; }
+        .log-entry span { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Napięcia paneli</h1>
+    <div id="voltages">Ładowanie...</div>
+
+    <h2>Logi</h2>
+    <div id="logs"></div>
+
+    <script>
+        const WORKER_URL = "https://twoj-worker.nazwa.workers.dev"; // Podmień na adres swojego Workera
+        const REFRESH_INTERVAL = 60000; // Odświeżaj co 60 sekund
+
+        async function fetchData() {
+            try {
+                const response = await fetch(WORKER_URL);
+                const data = await response.json();
+
+                // Aktualizacja napięć
+                const voltagesDiv = document.getElementById('voltages');
+                if (data.voltages) {
+                    voltagesDiv.innerHTML = data.voltages.map((v, i) => 
+                        `<div>Panel ${i + 1}: ${v} V</div>`
+                    ).join('');
+                } else {
+                    voltagesDiv.textContent = 'Brak danych o napięciach.';
+                }
+
+                // Dodanie logu
+                const logsDiv = document.getElementById('logs');
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                const timestamp = new Date(data.timestamp).toLocaleString();
+                let logMessage = `Odczyt: ${timestamp}`;
+                if (data.limitSet !== null) {
+                    logMessage += ` | <span>Ustawiono limit: ${data.limitSet}</span>`;
+                }
+                logEntry.innerHTML = logMessage;
+                logsDiv.prepend(logEntry);
+
+                // Ogranicz liczbę logów do 20
+                while (logsDiv.children.length > 20) {
+                    logsDiv.removeChild(logsDiv.lastChild);
+                }
+
+            } catch (error) {
+                console.error('Błąd pobierania danych:', error);
+                // Możesz dodać log błędu do interfejsu
+            }
+        }
+
+        // Pierwsze wywołanie i ustawienie interwału
+        fetchData();
+        setInterval(fetchData, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>
